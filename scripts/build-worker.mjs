@@ -20,8 +20,9 @@ writeFileSync('dist/index.html', html);
 const hashes = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)]
   .filter(([, attrs]) => !/\bsrc=/.test(attrs))
   .map(([, , code]) => `'sha256-${createHash('sha256').update(code).digest('base64')}'`);
-const contentSecurityPolicy = `default-src 'none'; script-src 'self' https://telegram.org ${hashes.join(' ')}; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src https:; font-src 'self' data:; connect-src 'self' https:; frame-src https://www.openstreetmap.org; frame-ancestors 'self' https://web.telegram.org https://*.telegram.org; base-uri 'none'; object-src 'none'; form-action 'none'`;
+const contentSecurityPolicy = `default-src 'none'; script-src 'self' https://telegram.org ${hashes.join(' ')}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src https:; font-src 'self' data:; connect-src 'self' https:; frame-src https://www.openstreetmap.org; frame-ancestors 'self' https://web.telegram.org https://*.telegram.org; base-uri 'none'; object-src 'none'; form-action 'none'`;
 const workerSource = readFileSync('public/worker.js', 'utf8');
+const librarySource = readFileSync('public/library.js', 'utf8');
 
 // src/content.ts has no external imports, so it can be transpiled and
 // executed standalone to pull out the plain data arrays it exports.
@@ -36,6 +37,7 @@ export const guides = ${JSON.stringify(GUIDES)};
 export const releases = ${JSON.stringify(RELEASES)};
 export const setup = ${JSON.stringify(SETUP)};
 export const workerSource = ${JSON.stringify(workerSource)};
+export const librarySource = ${JSON.stringify(librarySource)};
 export const contentSecurityPolicy = ${JSON.stringify(contentSecurityPolicy)};
 export default ${JSON.stringify(html)};
 `;

@@ -7,13 +7,13 @@ import worker, { BotState } from '../public/worker.js';
 const baseEnv = { BOT_TOKEN: '123456:synthetic-audit-token', ADMIN_KEY: 'synthetic-operator-key', WEBHOOK_SECRET: 'synthetic-webhook-secret' };
 const user = { id: 101, first_name: 'Audit', language_code: 'en' };
 let calls, fixture;
-function reset() { calls = []; baseEnv.BOT_STATE = namespace(); fixture = { userStatus: 'administrator', userPost: true, userEdit: true, userDelete: true, botStatus: 'administrator', botPost: true, botDelete: true }; }
+function reset() { calls = []; delete baseEnv.MEDIA_LIBRARY; baseEnv.BOT_STATE = namespace(); fixture = { userStatus: 'administrator', userPost: true, userEdit: true, userDelete: true, botStatus: 'administrator', botPost: true, botDelete: true }; }
 function namespace() {
  const stores=new Map(), instances=new Map();
  const ns={idFromName:name=>name,get:name=>({fetch:(url,options)=>{
   if(!stores.has(name))stores.set(name,new Map());
   const entries=stores.get(name);
-  const storage={get:async key=>structuredClone(entries.get(key)),put:async(key,value)=>{entries.set(key,structuredClone(value));},deleteAll:async()=>entries.clear(),setAlarm:async()=>{},list:async({prefix})=>new Map([...entries].filter(([key])=>key.startsWith(prefix))),delete:async key=>entries.delete(key)};
+  const storage={get:async key=>structuredClone(entries.get(key)),put:async(key,value)=>{if(key==='library'&&fixture.failLibraryStore)throw new Error('Synthetic storage failure');entries.set(key,structuredClone(value));},deleteAll:async()=>entries.clear(),setAlarm:async()=>{},list:async({prefix})=>new Map([...entries].filter(([key])=>key.startsWith(prefix))),delete:async key=>entries.delete(key)};
   if(!instances.has(name))instances.set(name,new BotState({storage},{...ns.env,BOT_STATE:ns}));
   return instances.get(name).fetch(new Request(url,options));
  }})};
@@ -22,8 +22,10 @@ function namespace() {
 globalThis.fetch = async (url, options) => {
   assert.equal(new URL(url).origin, 'https://api.telegram.org');
   const method = new URL(url).pathname.split('/').at(-1);
-  const data = JSON.parse(options.body);
-  calls.push({ method, data });
+  const multipart=options.body instanceof FormData;
+  const data=multipart?Object.fromEntries([...options.body].filter(([,value])=>typeof value==='string').map(([key,value])=>[key,/^(\{|\[)/.test(value)?JSON.parse(value):value])):JSON.parse(options.body);
+  const files=multipart?await Promise.all([...options.body].filter(([,value])=>typeof value!=='string').map(async([name,value])=>({name,mime:value.type,size:value.size,bytes:new Uint8Array(await value.arrayBuffer())}))):[];
+  calls.push({ method, data, files });
   if (fixture.failMethod===method) return Response.json({ok:false,error_code:429,parameters:{retry_after:4},description:'Synthetic rate limit'},{status:429});
   if (fixture.outage) return Response.json({ ok: false, error_code: 503, description: 'Synthetic Telegram outage' }, { status: 503 });
   let result = true;
@@ -48,7 +50,8 @@ async function request(path, { body = {}, headers = {}, env = {}, method = 'POST
   const response = await worker.fetch(req, requestEnv, { waitUntil: p => pending.push(p) });
   const content = await response.text();
   await Promise.all(pending);
-  return { status: response.status, content, headers: Object.fromEntries(response.headers) };
+  let json;try{json=JSON.parse(content);}catch{}
+  return { status: response.status, content, json, headers: Object.fromEntries(response.headers) };
 }
 const miniHeaders = () => ({ 'X-Telegram-Init-Data': signed() });
 const operatorHeaders = { Authorization: 'Bearer ' + baseEnv.ADMIN_KEY };
@@ -121,4 +124,75 @@ probe('throttled webhook updates remain retryable after the shared rate window r
  const now=Date.now;
  try{Date.now=()=>now()+60001;assert.equal((await request('/webhook',{headers:webhookHeaders,body:excess})).status,200);}finally{Date.now=now;}
  assert.equal(calls.filter(c=>c.method==='sendRichMessage').length,21);
+});
+
+const pixel=Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aVp8AAAAASUVORK5CYII=','base64'));
+function bucket(){
+ const objects=new Map();baseEnv.MEDIA_LIBRARY={
+  put:async(key,data,options)=>{objects.set(key,{bytes:Uint8Array.from(data),mime:options.httpMetadata.contentType});},
+  get:async key=>{const image=objects.get(key);return image?{body:image.bytes.slice()}:null;},
+  delete:async key=>{if(fixture.failR2Delete)throw new Error('Synthetic R2 failure');objects.delete(key);},
+ };return objects;
+}
+const upload=(options={})=>request('/api/library/upload',{headers:{...operatorHeaders,'Content-Type':'image/png','X-File-Name':encodeURIComponent('عکس.png'),...options.headers},raw:options.raw||pixel,env:options.env});
+const library=(action,body={},headers=operatorHeaders,env={})=>request('/api/library/'+action,{body,headers,env});
+probe('library rejects anonymous reads, uploads and deletes',async()=>{
+ bucket();for(const action of ['list','upload','delete-photo','add-link','delete-link'])assert.equal((await request('/api/library/'+action)).status,401);
+});
+probe('links work without R2 and persist after object eviction',async()=>{
+ let response=await library('list');assert.equal(response.json.result.r2_ready,false);
+ assert.equal((await library('add-link',{name:'محصول',url:'https://example.com/product'})).status,200);
+ baseEnv.BOT_STATE.restart();response=await library('list');assert.equal(response.json.result.links[0].name,'محصول');
+ const id=response.json.result.links[0].id;assert.equal((await library('delete-link',{id})).status,200);assert.equal((await library('list')).json.result.links.length,0);
+});
+probe('gallery fails clearly without the R2 binding',async()=>{assert.equal((await upload()).status,503);});
+probe('uploaded photos are private and deletion removes both file and metadata',async()=>{
+ const objects=bucket();const saved=await upload();assert.equal(saved.status,200);const image=saved.json.result.images[0];assert.equal(image.name,'عکس.png');assert.equal(objects.size,1);assert.equal(image.key,undefined);
+ const response=await library('photo',{id:image.id});assert.equal(response.status,200);assert.equal(response.headers['content-type'],'image/png');
+ assert.equal((await request('/media/'+image.id,{method:'GET'})).status,404);
+ baseEnv.BOT_STATE.restart();assert.equal((await library('list')).json.result.images.length,1);
+ assert.equal((await library('delete-photo',{id:image.id})).status,200);assert.equal(objects.size,0);assert.equal((await library('list')).json.result.images.length,0);assert.equal((await library('photo',{id:image.id})).status,404);
+});
+probe('another verified user cannot read, delete or send a library photo',async()=>{
+ const objects=bucket();const saved=await upload({headers:miniHeaders()});const image=saved.json.result.images[0];
+ const other={'X-Telegram-Init-Data':signed({user:JSON.stringify({id:202})}),'X-Library-Scope':'123456:user:101'};
+ assert.equal((await library('list',{},other)).json.result.images.length,0);
+ for(const action of ['photo','delete-photo'])assert.equal((await library(action,{id:image.id},other)).status,404);
+ assert.equal((await request('/api/send',{headers:other,body:{chat_id:202,rich_message:{html:`<img src="tg://photo?id=library_${image.id}"/>`}}})).status,404);assert.equal(mutating().length,0);assert.equal(objects.size,1);
+});
+probe('single-admin personal bot shares its gallery with the operator and that user',async()=>{
+ bucket();const env={ADMINS_ID:'101'};await upload({env});assert.equal((await library('list',{},miniHeaders(),env)).json.result.images.length,1);
+ assert.equal((await library('list',{},miniHeaders(),{ADMINS_ID:'101,202'})).json.result.images.length,1);
+ assert.equal((await library('list',{},operatorHeaders,{ADMINS_ID:'101,202'})).json.result.images.length,0);
+});
+probe('concurrent gallery uploads enforce exactly twenty photos',async()=>{
+ const objects=bucket();const responses=await Promise.all(Array.from({length:21},()=>upload()));assert.equal(responses.filter(response=>response.status===200).length,20);assert.equal(responses.filter(response=>response.status===409).length,1);assert.equal(objects.size,20);assert.equal((await library('list')).json.result.images.length,20);
+ const id=(await library('list')).json.result.images[0].id;await library('delete-photo',{id});assert.equal((await upload()).status,200);assert.equal(objects.size,20);
+});
+probe('file signatures, MIME types, file size and request size are validated',async()=>{
+ const objects=bucket();for(const [raw,mime] of [[new TextEncoder().encode('<svg onload="alert(1)"></svg>'),'image/svg+xml'],[pixel,'image/jpeg'],[new Uint8Array(5*1024*1024+1),'image/png']])assert.ok([400,413].includes((await upload({raw,headers:{'Content-Type':mime}})).status));assert.equal(objects.size,0);
+ assert.equal((await library('add-link',{name:'a'.repeat(16385),url:'https://example.com'})).status,413);
+});
+probe('failed metadata storage removes an uploaded R2 object',async()=>{
+ const objects=bucket();fixture.failLibraryStore=true;assert.equal((await upload()).status,503);assert.equal(objects.size,0);fixture.failLibraryStore=false;assert.equal((await library('list')).json.result.images.length,0);
+});
+probe('failed R2 deletion leaves the saved photo available for retry',async()=>{
+ const objects=bucket(),saved=await upload(),id=saved.json.result.images[0].id;fixture.failR2Delete=true;assert.equal((await library('delete-photo',{id})).status,503);assert.equal(objects.size,1);assert.equal((await library('list')).json.result.images.length,1);fixture.failR2Delete=false;assert.equal((await library('delete-photo',{id})).status,200);
+});
+probe('rich messages and edits attach private gallery photos as multipart files',async()=>{
+ bucket();const id=(await upload()).json.result.images[0].id,rich_message={html:`<img src="tg://photo?id=library_${id}"/><p>سلام</p>`};
+ for(const action of ['send','edit']){
+  assert.equal((await request('/api/'+action,{headers:operatorHeaders,body:{chat_id:101,message_id:55,rich_message}})).status,200);
+  const sent=mutating().at(-1);assert.deepEqual(sent.data.rich_message.media,[{id:'library_'+id,media:{type:'photo',media:'attach://photo0'}}]);assert.equal(sent.files.length,1);assert.equal(sent.files[0].mime,'image/png');assert.deepEqual(sent.files[0].bytes,pixel);
+ }
+ await library('delete-photo',{id});assert.equal((await request('/api/send',{headers:operatorHeaders,body:{chat_id:101,rich_message}})).status,404);assert.equal(mutating().length,2);
+});
+probe('saved links reject active schemes, credentials, duplicates and excess entries',async()=>{
+ for(const url of ['javascript:alert(1)','http://example.com','https://user:pass@example.com'])assert.equal((await library('add-link',{name:'Invalid',url})).status,400);
+ for(let index=0;index<20;index++)assert.equal((await library('add-link',{name:'Link '+index,url:'https://example.com/'+index})).status,200);
+ assert.equal((await library('add-link',{name:'Extra',url:'https://example.com/extra'})).status,409);
+ const saved=(await library('list')).json.result.links[0];await library('delete-link',{id:saved.id});assert.equal((await library('add-link',{name:'Replacement',url:'https://example.com/extra'})).status,200);
+});
+probe('library media IDs in plain text do not trigger photo uploads',async()=>{
+ assert.equal((await request('/api/send',{headers:operatorHeaders,body:{chat_id:101,rich_message:{markdown:'library_12345678-1234-4234-8234-123456789abc'}}})).status,200);assert.equal(mutating()[0].files.length,0);
 });

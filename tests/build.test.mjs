@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { transformSync } from 'esbuild';
-import html, { workerSource, guides, contentSecurityPolicy } from '../public/index.js';
+import html, { workerSource, librarySource, guides, contentSecurityPolicy } from '../public/index.js';
 
 test('generated module matches the current Worker and guide source', () => {
  assert.equal(workerSource,readFileSync(new URL('../public/worker.js',import.meta.url),'utf8'));
+ assert.equal(librarySource,readFileSync(new URL('../public/library.js',import.meta.url),'utf8'));
  const mod={exports:{}};
  const {code}=transformSync(readFileSync(new URL('../src/content.ts',import.meta.url),'utf8'),{loader:'ts',format:'cjs'});
  new Function('module','exports',code)(mod,mod.exports);

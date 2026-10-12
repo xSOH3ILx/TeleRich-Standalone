@@ -10,6 +10,10 @@ export function writeStore(key:string,value:unknown):boolean {
  try{localStorage.setItem(key,JSON.stringify(value));return true;}catch{return false;}
 }
 
+export function removeStore(key:string):boolean {
+ try{localStorage.removeItem(key);return true;}catch{return false;}
+}
+
 export const workspaceKey=(scope:string,key:string)=>`tr-workspace:${scope}:${key}`;
 
 export function clearWorkspace(scope:string):boolean {

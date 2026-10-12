@@ -1,8 +1,9 @@
 // TeleRich Studio — Telegram Bot API 10.3
-// Deploy with wrangler.jsonc: two modules plus the BOT_STATE Durable Object binding.
+// Deploy with wrangler.jsonc and BOT_STATE. MEDIA_LIBRARY is the optional private R2 gallery.
 // Secrets: BOT_TOKEN, ADMIN_KEY, WEBHOOK_SECRET. Optional: ADMINS_ID="123,456".
 // Never expose BOT_TOKEN or ADMIN_KEY in index.js. ADMIN_KEY is a trusted operator credential.
-import html, { guides, releases, setup, workerSource, contentSecurityPolicy } from './index.js';
+import html, { guides, releases, setup, workerSource, librarySource, contentSecurityPolicy } from './index.js';
+import { handleLibrary, libraryScope, libraryState, mediaPayload } from './library.js';
 
 const encoder = new TextEncoder();
 const escape = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -11,6 +12,7 @@ const allowed = (env, id) => !admins(env).length || admins(env).includes(String(
 const result = (data, status = 200, headers = {}) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store', ...headers } });
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const delivery = Symbol('delivery');
+const libraryOwner = Symbol('libraryOwner');
 const positiveId = value => Number.isSafeInteger(value) && value > 0;
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 async function readJson(request) {
@@ -59,10 +61,11 @@ async function telegram(env, method, data = {}) {
   const step = checkpoint ? checkpoint.next++ : 0;
   const saved = checkpoint?.calls[step];
   if (saved?.method === method && saved.digest === digest) return saved.result;
+  const media = data.rich_message ? await mediaPayload(env, env[libraryOwner], data) : null;
   for (let attempt = 0; attempt < 3; attempt++) {
     let response, body;
     try {
-      response = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/${method}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, signal: AbortSignal.timeout(6000) });
+      response = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/${method}`, { method: 'POST', headers: media ? {} : { 'Content-Type': 'application/json' }, body: media || payload, signal: AbortSignal.timeout(6000) });
       body = await response.json();
     } catch { throw fail('Telegram is temporarily unavailable. Please retry.', 503); }
     if (body.ok) {
@@ -181,6 +184,7 @@ export class BotState {
     return response;
   }
   async handle(request) {
+    if (new URL(request.url).pathname.startsWith('/library/')) return handleLibrary(request, this.state.storage, this.env);
     const path = new URL(request.url).pathname, data = await readJson(request), storage = this.state.storage;
     if (path === '/rate') {
       const now = Date.now(), previous = await storage.get('rate');
@@ -246,8 +250,10 @@ async function webApi(request, env, url) {
   const identity = await authenticate(request, env);
   const rate = await consumeRate(env, identity.operator ? 'operator' : 'user:' + identity.user.id, 60);
   if (!rate.allowed) throw Object.assign(fail('Too many requests. Please wait.', 429), { retryAfter: rate.retryAfter });
-  const data = await readJson(request);
   const action = url.pathname.slice(5);
+  if (action.startsWith('library/')) return libraryState(env, libraryScope(env, identity), action.slice(8), request);
+  const data = await readJson(request);
+  env = { ...env, [libraryOwner]: libraryScope(env, identity) };
   if (action === 'connect') {
     const bot = await telegram(env, 'getMe');
     return { ...bot, workspace_id: bot.id + ':' + (identity.operator ? 'operator' : 'user:' + identity.user.id) };
@@ -482,7 +488,7 @@ export default {
     const url = new URL(request.url);
     const origin = request.headers.get('Origin');
     const permitted = !env.ALLOWED_ORIGIN || origin === env.ALLOWED_ORIGIN || origin === url.origin;
-    const cors = { 'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN ? (permitted ? origin || url.origin : url.origin) : '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Telegram-Init-Data', 'Access-Control-Max-Age': '86400', 'Vary': 'Origin' };
+    const cors = { 'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN ? (permitted ? origin || url.origin : url.origin) : '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Telegram-Init-Data, X-File-Name', 'Access-Control-Max-Age': '86400', 'Vary': 'Origin' };
     if (request.method === 'OPTIONS') return new Response(null, { status: permitted ? 204 : 403, headers: cors });
     if (url.pathname === '/webhook') {
       if (request.method !== 'POST') return new Response('POST required', { status: 405 });
@@ -496,12 +502,17 @@ export default {
     }
     if (url.pathname.startsWith('/api/')) {
       if (!permitted) return result({ ok: false, description: 'Origin not allowed.' }, 403, cors);
-      try { return result({ ok: true, result: await webApi(request, env, url) }, 200, cors); }
+      try {
+        const value = await webApi(request, env, url);
+        if (value instanceof Response) return new Response(value.body, { status: value.status, headers: { ...Object.fromEntries(value.headers), ...cors } });
+        return result({ ok: true, result: value }, 200, cors);
+      }
       catch (error) { return result({ ok: false, description: error.message || 'Request failed.' }, error.status || 500, { ...cors, ...(error.retryAfter ? { 'Retry-After': String(error.retryAfter) } : {}) }); }
     }
     if (request.method === 'GET' && url.pathname === '/worker.js') return new Response(workerSource, { headers: { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-cache' } });
+    if (request.method === 'GET' && url.pathname === '/library.js') return new Response(librarySource, { headers: { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-cache' } });
     if (request.method === 'GET' && url.pathname === '/index.js') {
-      const values = { guides, releases, setup, workerSource, contentSecurityPolicy };
+      const values = { guides, releases, setup, workerSource, librarySource, contentSecurityPolicy };
       const source = Object.entries(values).map(([key, value]) => `export const ${key} = ${JSON.stringify(value)};`).join('\n') + '\nexport default ' + JSON.stringify(html) + ';\n';
       return new Response(source, { headers: { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-cache' } });
     }
