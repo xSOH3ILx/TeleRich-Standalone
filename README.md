@@ -1,317 +1,240 @@
-> **نسخه مستقل TeleRich:** این مخزن بر پایه [DarknessShade/TeleRich](https://github.com/DarknessShade/TeleRich)، با اصلاحات امنیتی و تاریخچه تازه منتشر شده است. تاریخچه و توکن افشاشده نسخه قدیمی وارد این مخزن نشده‌اند؛ مجوز MIT و اعتبار نویسنده اصلی حفظ شده‌اند. نصب به binding پایدار `BOT_STATE` نیاز دارد؛ از `wrangler.jsonc` استفاده کنید. راهنمای کامل و محدودیت‌ها در [SECURITY.md](SECURITY.md) است.
->
-> **Independent TeleRich edition:** based on [DarknessShade/TeleRich](https://github.com/DarknessShade/TeleRich), with security fixes and fresh Git history. Upstream history and its exposed credential were not imported; the original MIT license and author credits are preserved. Deployment requires the `BOT_STATE` Durable Object binding and SQLite migration in `wrangler.jsonc`. Read [SECURITY.md](SECURITY.md) for permissions, retention and delivery limits.
+# TeleRich Studio
 
-<h1 align="center">$$\color{gold} \large \text{Tele Rich}$$</h1>
+**استودیوی ساخت، پیش‌نمایش و انتشار پیام‌های تلگرام — نسخه مستقل ما**
 
-<div align="center">
+[![Validate](https://github.com/xSOH3ILx/TeleRich-Standalone/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/xSOH3ILx/TeleRich-Standalone/actions/workflows/ci.yml)
+[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-<img src="assets/hero.svg" alt="TeleRich — Rich Markdown & HTML messages for Telegram, on Cloudflare Workers" width="100%" />
+TeleRich Studio یک ویرایشگر تحت وب و ربات تلگرام است که متن Markdown یا HTML را به پیام ریچ تبدیل می‌کند. می‌توانید پیام را پیش‌نمایش کنید، دکمه بسازید، پیش‌نویس نگه دارید و در چت شخصی، کانال یا گروه مجاز منتشر کنید. رابط و راهنماهای ربات فارسی و انگلیسی هستند و اجرای پروژه روی Cloudflare Workers انجام می‌شود.
 
-<br/>
+این مخزن با نگهداری [xSOH3ILx](https://github.com/xSOH3ILx)، اصلاحات امنیتی و تاریخچه مستقل منتشر شده است. برای استفاده، ربات و Worker خودتان را راه‌اندازی کنید؛ این مخزن ربات عمومی آماده‌ای معرفی نمی‌کند.
 
-<div align="center">
+## امکانات
 
-<a href="https://t.me/Paradise_Of_Freedom"><img src="assets/cta-telegram-channel.svg" alt="Join @Paradise_Of_Freedom" width="25%" /></a>
-<a href="https://github.com/DarknessShade/TeleRich"><img src="assets/cta-star.svg" alt="Star TeleRich on GitHub" width="25%" /></a>
-<a href="https://t.me/MarkdownRenderBot"><img src="assets/cta-telegram-bot.svg" alt="Try @MarkdownRenderBot" width="25%" /></a>
+- ویرایش Markdown و HTML با پیش‌نمایش زنده، حالت روشن و تاریک و نمایش RTL/LTR.
+- قالب‌های آماده و راهنمای متن ریچ، جدول، نقل‌قول، اسپویلر، فرمول ریاضی، دکمه و مدیا؛ فرمول‌ها در پیش‌نمایش با KaTeX نمایش داده می‌شوند.
+- ساخت کیبورد اینلاین با لینک، callback، Web App، کپی متن و گزینه‌های جست‌وجوی اینلاین.
+- ارسال پیام و ویرایش پیام ارسال‌شده از استودیو، ارسال بی‌صدا، محافظت از محتوا و پیام زودگذر گروهی برای گیرنده مشخص.
+- مدیریت کانال‌ها و پیش‌نویس‌ها برای هر حساب احراز هویت‌شده؛ ذخیره متن، کیبورد و تنظیمات ارسال همراه پیش‌نویس.
+- بازگردانی تغییرات، دریافت سورس پیام به‌صورت `.md` یا `.html` و پاک کردن داده محلی حساب از تنظیمات.
+- ربات دوزبانه با راهنما، نمونه کد، دمو و دسترسی به Mini App.
 
-</div>
+پیش‌نمایش وب شبیه‌ساز است؛ نتیجه نهایی به پشتیبانی قابلیت‌ها در Telegram Bot API و نسخه برنامه تلگرام گیرنده بستگی دارد.
 
-[![Live Demo Bot](https://img.shields.io/badge/Telegram-%40MarkdownRenderBot-26A5E4?logo=telegram&logoColor=white)](https://t.me/MarkdownRenderBot)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![Cloudflare Workers](https://img.shields.io/badge/Runs%20on-Cloudflare%20Workers-F6821F?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
-[![Bot API](https://img.shields.io/badge/Telegram%20Bot%20API-10.3-26A5E4)](https://core.telegram.org/bots/api)
+## اجزای پروژه
 
-[English](#-english) — [فارسی](#-فارسی)
+| بخش | وظیفه |
+| --- | --- |
+| React، TypeScript، Vite و Tailwind CSS | رابط استودیو و ساخت خروجی وب |
+| Cloudflare Worker | احراز هویت، API، دریافت وب‌هوک و ارائه صفحه استودیو |
+| Durable Object با storage مبتنی بر SQLite | وضعیت تحویل وب‌هوک، محدودیت نرخ و مالکیت پیام‌های گروه |
+| Telegram Bot API | انتشار و مدیریت پیام‌ها |
+| `localStorage` مرورگر | پیش‌نویس‌ها و تنظیمات فضای هر حساب |
 
-</div>
+خروجی ساخت، صفحه وب و راهنماها را در `public/index.js` قرار می‌دهد؛ `public/worker.js` ورودی Worker است. نصب کامل به binding با نام `BOT_STATE` و migration موجود در [wrangler.jsonc](wrangler.jsonc) نیاز دارد. بارگذاری دو فایل JavaScript به‌تنهایی کافی نیست.
 
----
+## پیش‌نیازها
 
-## 🇮🇷 فارسی
+- حساب Cloudflare با امکان اجرای Workers و SQLite Durable Objects.
+- ربات شخصی ساخته‌شده در [BotFather](https://t.me/BotFather) و توکن آن.
+- برای نصب با ترمینال: Git، Node.js 22 و npm. CI پروژه با Node.js 22 اجرا می‌شود.
+- برای انتشار در کانال یا گروه: دسترسی مدیریتی لازم برای ربات و کاربر تلگرام.
 
-### 📌 این پروژه چیست؟
+## راه‌اندازی با ترمینال
 
-**TeleRich** یک ربات و استودیوی تحت‌وب برای ساخت **پیام‌های ریچ تلگرام (Rich Message)** است که **تماماً روی Cloudflare Workers** اجرا می‌شود — بدون سرور مجزا؛ با Durable Object کلودفلر برای وضعیت تحویل، مجوز پیام و محدودیت نرخ. کافی است متن ساده به‌صورت **Markdown** یا **HTML** بفرستید تا فوراً به یک پیام ریچ و فرمت‌شده در تلگرام تبدیل شود (بر پایه‌ی [Telegram Bot API نسخه‌ی ۱۰.۳](https://core.telegram.org/bots/api#rich-message-formatting-options) که امکانات فرمت‌بندی پیشرفته‌ای مثل بلوک‌ها، دکمه‌های ریچ و پیام‌های زودگذر را اضافه کرده است).
+### ۱. دریافت و ساخت سورس
 
-می‌توانید ربات زنده و آماده‌ی پروژه را همین حالا امتحان کنید: **[@MarkdownRenderBot](https://t.me/MarkdownRenderBot)**
-
-> 💡 یک نسخه‌ی پایتونی از همین ایده هم ساخته شده: **[TeleRich Python (arshiaCP)](https://github.com/arshiacomplus/TeleRich)**
-
-### ✨ ویژگی‌ها
-
-**۱. تبدیل متن به پیام ریچ**
-- ورودی هم **Markdown** و هم **HTML** پشتیبانی می‌شود؛ اگر پیامتان تگ HTML داشته باشد به‌صورت خودکار به‌عنوان HTML پردازش می‌شود.
-- پشتیبانی کامل از المان‌های متنی: بولد، ایتالیک، زیرخط، خط‌خورده، اسپویلر (`||text||`)، کد تک‌خطی و بلوک کد، بلاک‌کوت و بلاک‌کوت قابل‌جمع‌شدن (expandable)، هایلایت (`==text==`)، زیرنویس/بالانویس، لینک، ایموجی سفارشی (`custom_emoji`)، منشن کاربر با شناسه عددی، تاریخ/زمان یونیکس (`<tg-time>`) و فرمول ریاضی با نماد LaTeX که در پیش‌نمایش وب با **KaTeX** رندر می‌شود.
-- تشخیص خودکار موجودیت‌هایی مثل ایمیل، شماره تلفن، شماره کارت بانکی و نام‌کاربری (`@username`).
-- تشخیص خودکار جهت متن (**RTL/LTR**) برای نمایش درست محتوای فارسی و عربی در کنار انگلیسی.
-
-**۲. استودیوی تصویری (Mini App)**
-- یک وب‌اپ تک‌فایلی ساخته‌شده با **React + Tailwind** که به‌صورت **Telegram Mini App** داخل خود ربات باز می‌شود.
-- ویرایشگر کد با هایلایت نحوی، پیش‌نمایش زنده‌ی شبیه‌ساز موبایل تلگرام (حالت روشن/تاریک)، مدیریت پیش‌نویس‌ها (Drafts)، گالری قالب و کتابخانه‌ی راهنمای هر قابلیت با نمونه‌کد آماده.
-- سازنده‌ی دکمه‌های شیشه‌ای (Inline Keyboard) با انواع اکشن (URL، callback، Web App، سوییچ اینلاین، کپی متن) و استایل‌های رنگی (primary/success/danger) و همچنین دکمه‌های ریچ داخل خود متن (`<tg-button-row>`).
-- ارسال مدیا (تکی یا گروهی/آلبوم)، جدول و چیدمان‌های بلوکی.
-- پیام‌های زودگذر (Ephemeral Messages) و پیش‌نویس‌های استریم‌شونده (Rich Message Draft).
-
-**۳. انتشار در کانال/گروه**
-- از داخل استودیو می‌توانید مستقیماً پست بسازید و در **کانال یا گروه** منتشر کنید؛ پیش از انتشار بررسی می‌شود که هم شما و هم ربات ادمین مقصد باشید و ربات اجازه‌ی ارسال پست داشته باشد.
-
-**۴. امنیت و کنترل دسترسی**
-- احراز هویت Mini App با اعتبارسنجی **HMAC-SHA256** روی `initData` تلگرام (با انقضای یک‌ساعته) — دقیقاً طبق مستندات رسمی تلگرام.
-- دسترسی از مرورگر بیرونی (خارج از تلگرام) فقط با یک `ADMIN_KEY` مجزا امکان‌پذیر است.
-- Webhook با `secret_token` محافظت می‌شود تا فقط سرورهای تلگرام بتوانند به‌روزرسانی ارسال کنند.
-- فهرست اختیاری `ADMINS_ID` برای محدود کردن استفاده از ربات فقط به چند کاربر مشخص.
-
-**۵. دوزبانه از پایه**
-- کل منوها، دستورات و راهنماهای ربات به **فارسی و انگلیسی** نوشته شده‌اند و بر اساس زبان کاربر (`language_code` تلگرام) به‌صورت خودکار انتخاب می‌شوند؛ در هر لحظه هم می‌توان با یک دکمه زبان را عوض کرد.
-
-**۶. سبک، شفاف و بدون وابستگی اجرایی پنهان**
-- کل ربات و وب‌اپ در قالب یک ماژول جاوااسکریپت (`public/index.js`) به همراه ورودی Worker (`public/worker.js`) ساخته می‌شود؛ وضعیت تحویل، مجوز پیام و محدودیت نرخ در Durable Object کلودفلر نگهداری می‌شوند. پیش‌نویس‌ها و کانال‌های ثبت‌شده در استودیو فقط در `localStorage` مرورگر خودتان ذخیره می‌شوند.
-- کد کامل `worker.js` حتی از مسیر `GET /worker.js` هم قابل مشاهده/دانلود است — یعنی همیشه می‌دانید دقیقاً چه چیزی روی Cloudflare شما در حال اجراست.
-
-### 🎯 این پروژه به چه دردی می‌خورد؟
-
-- مدیران کانال و گروه‌های تلگرامی که می‌خواهند پست‌های زیبا و فرمت‌شده (با دکمه، مدیا، جدول) بدون دردسر کدنویسی بسازند.
-- توسعه‌دهنده‌هایی که می‌خواهند یاد بگیرند Rich Message تلگرام (Bot API 10.3) دقیقاً چگونه کار می‌کند — راهنمای هر ویژگی همراه با نمونه‌کد HTML/Markdown در خود ربات موجود است.
-- کسانی که به دنبال یک نمونه‌ی واقعی و production-ready از **بات تلگرامی روی Cloudflare Workers** با Mini App، webhook امن و بدون سرور هستند.
-
-### 🚀 نصب و راه‌اندازی (حتی فقط با گوشی!)
-
-این راهنما طوری نوشته شده که کاملاً از طریق **مرورگر گوشی** و بدون نیاز به کامپیوتر، ترمینال یا نصب Node.js قابل انجام باشد؛ Cloudflare خودش کار Build و Deploy را روی سرورهایش انجام می‌دهد و تنظیمات binding و migration از فایل wrangler.jsonc خوانده می‌شود.
-
-**قدم ۱ — ساخت ربات تلگرام**
-1. در تلگرام به [@BotFather](https://t.me/BotFather) پیام دهید و دستور `/newbot` را بفرستید.
-2. یک نام و یوزرنیم برای ربات انتخاب کنید.
-3. توکنی که BotFather می‌دهد (`BOT_TOKEN`) را جایی امن ذخیره کنید — این توکن را **هرگز** در جای عمومی یا داخل ویرایشگر وب پیست نکنید.
-
-**قدم ۲ — فورک کردن ریپازیتوری**
-1. اپ یا مرورگر گیت‌هاب را باز کنید و به آدرس [github.com/xSOH3ILx/TeleRich-Standalone](https://github.com/xSOH3ILx/TeleRich-Standalone) بروید.
-2. روی دکمه‌ی **Fork** بزنید (در اپ گیت‌هاب هم از منوی «...» بالای صفحه‌ی ریپو در دسترس است) و آن را روی اکانت خودتان فورک کنید.
-
-**قدم ۳ — ساخت اکانت و اتصال Cloudflare Workers**
-1. اگر اکانت Cloudflare ندارید، از طریق مرورگر گوشی در آدرس [dash.cloudflare.com](https://dash.cloudflare.com) ثبت‌نام کنید (رایگان).
-2. از منو وارد بخش **Workers & Pages** شوید و روی **Create** بزنید.
-3. گزینه‌ی اتصال به گیت (**Connect to Git**) را انتخاب و اکانت گیت‌هابتان را متصل کنید، سپس ریپازیتوری `TeleRich-Standalone` خودتان یا فورک آن را انتخاب کنید.
-4. در تنظیمات build:
-   - **Build command:** `npm ci --ignore-scripts && npm run build`
-   - **Deploy command:** `npx wrangler deploy`
-   - **Root directory:** `/` (پیش‌فرض)
-
-   Cloudflare با هر Push به شاخه‌ی `main` به‌صورت خودکار این پروژه را build و deploy می‌کند — نیازی به نصب چیزی روی گوشی یا کامپیوتر خودتان نیست.
-
-**قدم ۴ — تنظیم متغیرها و رازها (Secrets)**
-در تنظیمات Worker خود، مسیر **Settings → Variables and Secrets** را باز کنید و موارد زیر را اضافه کنید (به‌صورت Secret، نه متغیر معمولی):
-
-| نام | توضیح | اجباری؟ |
-|---|---|---|
-| `BOT_TOKEN` | توکنی که از BotFather گرفتید | ✅ بله |
-| `WEBHOOK_SECRET` | یک رشته‌ی تصادفی و قوی که خودتان می‌سازید | ✅ بله |
-| `ADMIN_KEY` | یک رشته‌ی تصادفی و قوی **متفاوت** برای دسترسی از مرورگر بیرونی | ✅ بله |
-| `ADMINS_ID` | فهرستی از شناسه‌های عددی تلگرام با کاما جدا شده، مثلاً `123456,654321` | اختیاری — اگر خالی باشد همه‌ی کاربران احراز‌هویت‌شده می‌توانند از ربات استفاده کنند |
-| `ALLOWED_ORIGIN` | محدود کردن CORS به یک دامنه‌ی مشخص | اختیاری |
-
-**قدم ۵ — Deploy و ثبت Webhook**
-1. پس از اولین دیپلوی، Cloudflare یک آدرس مثل `https://telerich.<your-subdomain>.workers.dev` به شما می‌دهد.
-2. همین آدرس را در مرورگر گوشی باز کنید — صفحه‌ی استودیوی TeleRich باز می‌شود.
-3. چون هنوز از داخل تلگرام باز نکرده‌اید، از شما `ADMIN_KEY` خواسته می‌شود؛ همان مقداری که در قدم ۴ تنظیم کردید را وارد کنید.
-4. در بخش تنظیمات (Settings) داخل استودیو، روی «تست اتصال» بزنید و راهنمای نصب بزنید و سپس گزینه‌ی «ثبت Webhook» را انتخاب کنید — این کار به‌صورت امن متد `setWebhook` را همراه با `secret_token` شما و مسیر `/webhook` فراخوانی می‌کند.
-
-**قدم ۶ — تنظیم دکمه‌ی منو در BotFather (برای باز شدن Mini App)**
-1. دوباره به BotFather پیام دهید و `/mybots` → ربات خودتان → **Bot Settings → Menu Button** (یا مستقیماً دستور `/setmenubutton`) را بزنید.
-2. آدرس همان Worker خودتان (مثل `https://telerich.<your-subdomain>.workers.dev`) را به‌عنوان URL دکمه‌ی منو ثبت کنید.
-
-**قدم ۷ — تست نهایی**
-به ربات خودتان در تلگرام پیام `/start` بدهید؛ باید منوی خوش‌آمدگویی دوزبانه را ببینید. با دستور `/setup` هم می‌توانید همین راهنمای نصب را به‌صورت خلاصه داخل خود ربات مرور کنید.
-
-> 🔐 نکته‌ی امنیتی: `BOT_TOKEN` و `ADMIN_KEY` را فقط در Secrets مربوط به Cloudflare Worker وارد کنید، هرگز در کد، GitHub یا هر جای عمومی دیگر قرار ندهید.
-
-### 🗂 ساختار پروژه
-
-```
-TeleRich/
-├─ public/
-│  ├─ worker.js     # نقطه‌ی ورود Worker (پردازش webhook، API و سرو کردن اپ)
-│  └─ index.js       # فایل خروجی build: وب‌اپ + راهنماها + کد خام worker.js
-├─ src/               # سورس React/TypeScript استودیو (App.tsx, Renderer.tsx, content.ts, ...)
-├─ scripts/
-│  └─ build-worker.mjs  # اسکریپت تولید public/index.js از خروجی Vite و src/content.ts
-├─ wrangler.jsonc     # پیکربندی Cloudflare Worker
-└─ package.json
+```sh
+git clone https://github.com/xSOH3ILx/TeleRich-Standalone.git
+cd TeleRich-Standalone
+npm ci --ignore-scripts
+npm run build
 ```
 
-### 🛠 دستورات ربات
+فایل `public/index.js` تولید می‌شود و TypeScript هم در همین مرحله بررسی می‌شود. این فایل را دستی ویرایش نکنید.
 
-`/start` `/help` `/post` · `/guide` `/markdown` · `/html` · `/media` · `/buttons` · `/table` · `/demo` · `/setup` · `/updates` · `/webapp` · `/whoami` · `/about`
+### ۲. ایجاد Worker
 
-### 📄 لایسنس
+در [wrangler.jsonc](wrangler.jsonc)، نام Worker به‌صورت پیش‌فرض `telerich` است. اگر Worker دیگری با این نام دارید، نام مناسب خودتان را انتخاب کنید. binding و migration مربوط به `BotState` را حفظ کنید.
 
-منتشر شده تحت **لایسنس MIT** — استفاده، تغییر و توزیع آزاد است؛ ذکر منبع باعث خوشحالی‌مان می‌شود. 🙏
-
-**ÐΛɌ₭ᑎΞ𐒡𐒡** — [GitHub](https://github.com/DarknessShade) · [Paradise Of Freedom](https://t.me/Paradise_Of_Freedom) · [ConfigWireguard](https://t.me/ConfigWireguard)
-
-⭐ اگر این پروژه به کارتان آمد، حتماً یک ستاره بدهید: **[github.com/DarknessShade/TeleRich](https://github.com/DarknessShade/TeleRich)**
-
-<div align="right">
-
-[⬆ بازگشت به بالا](#-فارسی)
-
-</div>
-
----
-
-## 🇬🇧 English
-
-### 📌 What is this project?
-
-**TeleRich** is a bot and web studio for building **Telegram Rich Messages** that runs **entirely on Cloudflare Workers** — no separate server, with Cloudflare Durable Objects for delivery state, message ownership and rate limits. Send plain **Markdown** or **HTML** and get back an instantly rendered, fully formatted Telegram message, built on top of [Telegram Bot API 10.3](https://core.telegram.org/bots/api#rich-message-formatting-options) and its rich-message formatting options (structured blocks, rich buttons, ephemeral messages, and more).
-
-Try the live demo bot right now: **[@MarkdownRenderBot](https://t.me/MarkdownRenderBot)**
-
-> 💡 A community-built Python port of the same idea exists too: **[TeleRich Python (arshiaCP)](https://github.com/arshiacomplus/TeleRich)**
-
-### ✨ Features
-
-**1. Text → Rich Message**
-- Accepts both **Markdown** and **HTML** input; messages containing HTML tags are automatically parsed as HTML.
-- Full coverage of Bot API rich-text elements: bold, italic, underline, strikethrough, spoiler (`||text||`), inline code and code blocks, blockquote and expandable blockquote, highlighted marks (`==text==`), sub/superscript, links, custom emoji, numeric-ID text mentions, Unix-timestamp date/time (`<tg-time>`), and inline LaTeX math rendered with **KaTeX** in the live preview.
-- Automatic entity detection for emails, phone numbers, bank card numbers, and `@username` mentions.
-- Automatic **RTL/LTR** text direction detection, so Persian/Arabic content renders correctly alongside English.
-
-**2. Visual studio (Telegram Mini App)**
-- A single-file **React + Tailwind** web app that opens as a **Telegram Mini App** directly inside the bot.
-- Syntax-highlighted code editor, a live phone-simulator preview (light/dark), draft management, a template gallery, and an in-app guide library with ready-to-use code examples for every feature.
-- Inline-keyboard builder with every button action type (URL, callback, Web App, switch-inline, copy text) and color styles (primary/success/danger), plus inline rich buttons (`<tg-button-row>`) embedded directly in the message body.
-- Single and grouped/album media sending, tables, and structured block layouts.
-- Ephemeral messages and streaming rich-message drafts.
-
-**3. Channel & group publishing**
-- Compose a post in the studio and publish it straight to a **channel or group**; TeleRich verifies both you and the bot are administrators of the destination and that the bot has permission to post before publishing.
-
-**4. Security & access control**
-- Mini App authentication verified via **HMAC-SHA256** validation of Telegram's `initData` (with a one-hour expiry), following Telegram's official Mini App auth spec.
-- Access from an external browser (outside Telegram) requires a separate `ADMIN_KEY`.
-- The webhook is protected with a `secret_token` so only Telegram's servers can deliver updates.
-- Optional `ADMINS_ID` allowlist to restrict bot usage to specific numeric user IDs.
-
-**5. Bilingual by design**
-- Every menu, command, and guide is written in **Persian and English**, auto-selected from the user's Telegram `language_code`, with a one-tap toggle to switch languages at any time.
-
-**6. Lightweight, transparent, documented external services**
-- The entire bot and web app compile down to one JavaScript module (`public/index.js`) plus the Worker entry point (`public/worker.js`). Cloudflare Durable Objects store delivery state, message ownership and rate limits. Drafts and registered channels created in the studio are stored only in your own browser's `localStorage`.
-- The full `worker.js` source is even served back at `GET /worker.js`, so you can always inspect exactly what's running on your own Cloudflare account.
-
-### 🎯 What is it useful for?
-
-- Channel/group admins who want polished, formatted posts (with buttons, media, tables) without writing any code.
-- Developers who want a hands-on way to learn exactly how Telegram Rich Messages (Bot API 10.3) work — every feature has an in-bot guide with matching HTML/Markdown code.
-- Anyone looking for a real, production-shaped example of a **Telegram bot on Cloudflare Workers**, complete with a Mini App, a secured webhook, and zero servers.
-
-### 🚀 Installation & setup (mobile-friendly, no computer required)
-
-This guide is written so it can be completed entirely from a **phone browser** — no terminal and no local Node.js install needed, since Cloudflare builds and deploys the project on its own servers.
-
-**Step 1 — Create your Telegram bot**
-1. Message [@BotFather](https://t.me/BotFather) in Telegram and send `/newbot`.
-2. Choose a name and username for your bot.
-3. Save the token BotFather gives you (`BOT_TOKEN`) somewhere safe — **never** paste it anywhere public or into the web editor.
-
-**Step 2 — Fork the repository**
-1. Open the GitHub app or your phone browser and go to [github.com/xSOH3ILx/TeleRich-Standalone](https://github.com/xSOH3ILx/TeleRich-Standalone).
-2. Tap **Fork** (in the GitHub mobile app this is under the "..." menu at the top of the repo page) and fork it to your own account.
-
-**Step 3 — Create a Cloudflare account and connect the Worker**
-1. If you don't have one, sign up for a free account at [dash.cloudflare.com](https://dash.cloudflare.com) from your phone browser.
-2. Open **Workers & Pages** and tap **Create**.
-3. Choose **Connect to Git**, link your GitHub account, and select your `TeleRich-Standalone` repository or your fork of it.
-4. In the build settings:
-   - **Build command:** `npm ci --ignore-scripts && npm run build`
-   - **Deploy command:** `npx wrangler deploy`
-   - **Root directory:** `/` (default)
-
-   Cloudflare will automatically build and deploy this project on every push to `main` — nothing needs to be installed on your own device.
-
-**Step 4 — Configure environment variables & secrets**
-In your Worker's **Settings → Variables and Secrets**, add the following (as **Secrets**, not plain variables):
-
-| Name | Description | Required? |
-|---|---|---|
-| `BOT_TOKEN` | The token from BotFather | ✅ Yes |
-| `WEBHOOK_SECRET` | A strong random string you generate yourself | ✅ Yes |
-| `ADMIN_KEY` | A **different** strong random string for external-browser admin access | ✅ Yes |
-| `ADMINS_ID` | Comma-separated Telegram numeric user IDs, e.g. `123456,654321` | Optional — leave empty to allow any authenticated Telegram user |
-| `ALLOWED_ORIGIN` | Restrict CORS to a single origin | Optional |
-
-**Step 5 — Deploy and register the webhook**
-1. After the first deploy, Cloudflare gives you a URL like `https://telerich.<your-subdomain>.workers.dev`.
-2. Open that URL in your phone browser — the TeleRich studio loads.
-3. Since you haven't opened it from inside Telegram yet, it will ask for your `ADMIN_KEY` — enter the value you set in Step 4.
-4. In the studio's Settings, tap **Test connection**, then **Register webhook** — this securely calls Telegram's `setWebhook` with your `secret_token` and the `/webhook` endpoint.
-
-**Step 6 — Set the Mini App menu button in BotFather**
-1. Message BotFather again: `/mybots` → your bot → **Bot Settings → Menu Button** (or send `/setmenubutton` directly).
-2. Set your Worker's URL (e.g. `https://telerich.<your-subdomain>.workers.dev`) as the menu button's Web App URL.
-
-**Step 7 — Final test**
-Send `/start` to your bot in Telegram — you should see the bilingual welcome menu. You can also run `/setup` any time to review this same deployment guide from inside the bot itself.
-
-> 🔐 Security note: keep `BOT_TOKEN` and `ADMIN_KEY` only inside your Cloudflare Worker's Secrets — never commit them to code, GitHub, or anywhere public.
-
-### 🗂 Project structure
-
-```
-TeleRich/
-├─ public/
-│  ├─ worker.js     # Worker entry point (webhook handling, API, serving the app)
-│  └─ index.js       # Build output: bundled web app + guides + raw worker.js source
-├─ src/               # React/TypeScript source for the studio (App.tsx, Renderer.tsx, content.ts, ...)
-├─ scripts/
-│  └─ build-worker.mjs  # Generates public/index.js from the Vite build + src/content.ts
-├─ wrangler.jsonc     # Cloudflare Worker configuration
-└─ package.json
+```sh
+npx wrangler login
+npx wrangler deploy
 ```
 
-### 🛠 Bot commands
+این دستور Worker و منابع تعریف‌شده در پیکربندی را مستقر می‌کند و آدرس HTTPS آن را نمایش می‌دهد. سپس رازهای ربات را تنظیم کنید.
 
-`/start` `/help` `/post` · `/guide` `/markdown` · `/html` · `/media` · `/buttons` · `/table` · `/demo` · `/setup` · `/updates` · `/webapp` · `/whoami` · `/about`
+### ۳. تنظیم Secrets
 
-### 📄 License
+| نام | کاربرد | وضعیت |
+| --- | --- | --- |
+| `BOT_TOKEN` | توکن ربات خودتان از BotFather | لازم |
+| `WEBHOOK_SECRET` | راز تصادفی برای اعتبارسنجی درخواست وب‌هوک | لازم |
+| `ADMIN_KEY` | کلید مستقل و قوی اپراتور برای مرورگر و ثبت وب‌هوک | لازم برای مدیریت |
+| `ADMINS_ID` | شناسه‌های عددی کاربران مجاز، جداشده با کاما | اختیاری؛ برای ربات شخصی تنظیم کنید |
+| `ALLOWED_ORIGIN` | مبدأ اضافی مجاز برای درخواست‌های مرورگر؛ مانند آدرس HTTPS استودیو | اختیاری |
 
-Released under the **MIT License** — free to use, modify, and distribute; credit is always appreciated. 🙏
+```sh
+npx wrangler secret put BOT_TOKEN
+npx wrangler secret put WEBHOOK_SECRET
+npx wrangler secret put ADMIN_KEY
+npx wrangler secret put ADMINS_ID
+```
 
-**ÐΛɌ₭ᑎΞ𐒡𐒡** — [GitHub](https://github.com/DarknessShade) · [Paradise Of Freedom](https://t.me/Paradise_Of_Freedom) · [ConfigWireguard](https://t.me/ConfigWireguard)
+هر دستور مقدار را به‌صورت تعاملی دریافت می‌کند. `WEBHOOK_SECRET` و `ADMIN_KEY` دو مقدار تصادفی متفاوت باشند. برای ربات شخصی، در مرحله آخر شناسه خودتان را وارد کنید؛ مانند `123456789` یا فهرست `123456789,987654321`.
 
-⭐ If this project was useful to you, please consider starring it: **[github.com/DarknessShade/TeleRich](https://github.com/DarknessShade/TeleRich)**
+**خالی بودن `ADMINS_ID` یعنی کاربران تلگرام می‌توانند پس از احراز هویت از ربات استفاده کنند.** این فهرست مجوز انتشار در کانال دیگران نمی‌دهد؛ مجوز مقصد جداگانه بررسی می‌شود. کلید `ADMIN_KEY` دسترسی اپراتور دارد و باید فقط در اختیار افراد مورد اعتماد باشد.
 
-<div align="right">
+توکن ربات را در کد، README، Issue یا ویرایشگر پیام وارد نکنید. روش افزودن رازها در [مستندات Cloudflare Secrets](https://developers.cloudflare.com/workers/configuration/secrets/) توضیح داده شده است.
 
-[⬆ Back to top](#-english)
+### ۴. ثبت وب‌هوک و اتصال Mini App
 
-</div>
+1. آدرس HTTPS Worker را در مرورگر باز کنید.
+2. در بخش اتصال یا Settings، فیلد آدرس را برای استفاده از Worker همین صفحه خالی بگذارید و `ADMIN_KEY` را وارد کنید. روی **بررسی اتصال / Test connection** بزنید.
+3. وارد **راهنمای نصب / Setup** شوید و **ثبت وب‌هوک / Register webhook** را انتخاب کنید. این کار `/webhook` را با راز تنظیم‌شده ثبت می‌کند و دستورات ربات را می‌سازد.
+4. در BotFather دستور `/setmenubutton` را اجرا کنید و آدرس همان Worker را برای دکمه منوی ربات قرار دهید.
+5. به ربات خودتان `/start` بفرستید و استودیو را از داخل تلگرام باز کنید. در Mini App، هویت تلگرام به‌صورت خودکار بررسی می‌شود؛ برای استفاده معمول نیازی به کلید اپراتور ندارید.
 
-### 📄 لایسنس و اعتبارات
+برای یافتن شناسه عددی خودتان، پس از ثبت وب‌هوک دستور `/whoami` را به ربات بفرستید. این دستور برای شناسایی کاربر حتی خارج از فهرست `ADMINS_ID` در دسترس است و دسترسی به استودیو نمی‌دهد.
 
-این پروژه تحت **لایسنس MIT** منتشر شده — استفاده، تغییر و توزیع آن آزاد است، ولی ذکر منبع باعث خوشحالی‌مون می‌شه. 🙏
+## نصب از طریق گیتهاب و داشبورد Cloudflare
 
-**ÐΛɌ₭ᑎΞ𐒡𐒡** — [GitHub](https://github.com/DarknessShade) • [Paradise Of Freedom](https://t.me/Paradise_Of_Freedom) • [ConfigWireguard](https://t.me/ConfigWireguard)
+این روش از مرورگر هم قابل انجام است:
 
-اینم TeleRich نسخه پایتون [TeleRich Python arshiaCP](https://github.com/arshiacomplus/TeleRich)
+1. از همین مخزن در حساب خودتان یک Fork بسازید؛ اگر مالک مخزن هستید، مستقیماً از آن استفاده کنید.
+2. در داشبورد Cloudflare، از **Workers & Pages** یک Worker با اتصال به مخزن GitHub ایجاد کنید و مخزن `TeleRich-Standalone` یا فورک خودتان را انتخاب کنید.
+3. پیکربندی ساخت را مطابق جدول زیر قرار دهید و نام Worker را با `wrangler.jsonc` هماهنگ کنید.
+4. پس از استقرار، Secrets را در تنظیمات همان Worker وارد کنید و مراحل ثبت وب‌هوک و Mini App بالا را انجام دهید.
 
-⭐ اگه پروژه رو دوست داشتید، ستاره بدید: **[github.com/DarknessShade/TeleRich](https://github.com/DarknessShade/TeleRich)**
+| تنظیم | مقدار |
+| --- | --- |
+| شاخه انتشار | `main` |
+| مسیر ریشه پروژه | `/` |
+| Build command | `npm ci --ignore-scripts && npm run build` |
+| Deploy command | `npx wrangler deploy` |
 
-## Validation / اعتبارسنجی
+راهنمای اتصال و تنظیمات در [Cloudflare Git integration](https://developers.cloudflare.com/workers/ci-cd/builds/git-integration/) و [Workers Builds configuration](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/) آمده است. پس از فعال کردن این اتصال، push به شاخه انتشار می‌تواند استقرار خودکار ایجاد کند. workflow گیتهاب این پروژه فقط اعتبارسنجی و dry-run انجام می‌دهد.
+
+## استفاده روزمره
+
+1. ربات را باز کنید و وارد استودیو شوید؛ یا از مرورگر با کلید اپراتور متصل شوید.
+2. قالب Markdown یا HTML را انتخاب کنید، متن را بنویسید و پیش‌نمایش را بررسی کنید.
+3. در صورت نیاز کیبورد، مدیا یا تنظیمات ارسال را اضافه کنید.
+4. برای چت شخصی داخل Mini App، مقصد به‌صورت خودکار حساب خودتان است. در مرورگر اپراتور، شناسه چت مقصد را وارد کنید؛ گیرنده باید قبلاً گفت‌وگو با ربات را آغاز کرده باشد.
+5. برای کانال یا گروه، ربات را مدیر مقصد کنید و مقصد را در بخش Channels با `@username` یا شناسه عددی اضافه کنید. کاربر Mini App هم باید مدیر مقصد و دارای مجوز عملیات باشد.
+6. پیام را ارسال کنید یا برای ادامه کار پیش‌نویس بگیرید. وضعیت ذخیره‌سازی کنار ویرایشگر را بررسی کنید.
+
+نمونه ساده Markdown:
+
+```md
+# اطلاعیه
+
+**ثبت‌نام آغاز شد.**
+
+زمان: شنبه، ساعت ۱۰
+```
+
+بارگذاری عکس، ویدیو و نقشه در پیش‌نمایش به‌صورت پیش‌فرض خاموش است. با فعال کردن آن، مرورگر به میزبان مدیا و برای نقشه به OpenStreetMap درخواست می‌فرستد.
+
+### دستورات ربات
+
+| دستور | کاربرد |
+| --- | --- |
+| `/start`، `/help`، `/post` | منوی اصلی و دسترسی به استودیو |
+| `/guide`، `/markdown` | راهنمای متن ریچ |
+| `/html` | راهنمای بلوک‌ها و چیدمان |
+| `/media` | راهنمای مدیا |
+| `/buttons`، `/table` | نمونه دکمه و جدول |
+| `/demo` | نمونه قابلیت‌ها |
+| `/setup` | راهنمای راه‌اندازی |
+| `/updates` | تغییرات Bot API معرفی‌شده در پروژه |
+| `/webapp` | باز کردن استودیو |
+| `/whoami` | نمایش شناسه عددی تلگرام |
+| `/about` | اعتبارات پروژه |
+
+## امنیت و داده‌ها
+
+- نشست Mini App در سرور با HMAC تلگرام و اعتبار یک‌ساعته بررسی می‌شود. وب‌هوک راز مستقل دارد.
+- مجوز ارسال، ویرایش و حذف کانال جداگانه بررسی می‌شود. ویرایش پیام گروه برای کاربر معمولی به مالکیت ثبت‌شده پیام وابسته است؛ مالک گروه و اپراتور استثنا هستند.
+- فضای محلی بر اساس Worker، ربات و هویت تأییدشده جدا می‌شود. تغییر حساب، محتوای حساب قبلی را از وضعیت فعال کنار می‌گذارد.
+- کلید اپراتور فقط در حافظه صفحه نگهداری می‌شود. اتصال به Worker بیرونی به تأیید شما و کلید اپراتور نیاز دارد؛ داده نشست تلگرام به مبدأ دیگر ارسال نمی‌شود.
+- کنترل تکرار وب‌هوک و checkpoint عملیات موفق ۲۴ ساعت نگهداری می‌شود. خطای گذرای تلگرام پاسخ قابل تحویل مجدد ایجاد می‌کند؛ timeout پس از پذیرش پیام همچنان می‌تواند نتیجه مبهم داشته باشد.
+- محدودیت مشترک API برابر ۶۰ درخواست در دقیقه برای هر هویت و وب‌هوک برابر ۲۰ آپدیت در دقیقه برای هر کاربر است.
+- Durable Object متن پیام یا راز ربات را ذخیره نمی‌کند؛ digest، وضعیت تحویل، شمارنده نرخ و شناسه مالک پیام گروه نگهداری می‌شوند.
+- پیش‌نویس‌های مرورگر در `localStorage` به‌صورت متن ساده‌اند و برای فرد دارای دسترسی به همان پروفایل مرورگر قابل مشاهده هستند. داده قدیمی بدون مالک، خودکار وارد فضای حساب جدید نمی‌شود.
+
+صفحه با CSP تولیدشده از همان build ارائه می‌شود و پیش‌نمایش، عناصر فعال نامجاز را حذف می‌کند. SDK رسمی Mini App از `telegram.org` دریافت می‌شود؛ فونت فرمول‌ها در خروجی بسته‌بندی شده‌اند.
+
+جزئیات سیاست دسترسی، نگهداری داده و محدودیت‌ها در [SECURITY.md](SECURITY.md) آمده است. گذراندن آزمون‌ها و اسکن الگوهای راز، تضمین نبود همه آسیب‌پذیری‌ها نیست؛ پیش از استفاده اصلی، ربات و کانال آزمایشی خودتان را بررسی کنید.
+
+## توسعه و اعتبارسنجی
 
 ```sh
 npm ci --ignore-scripts
-npm run build
-npm test
+npm run dev
+```
+
+`npm run dev` رابط Vite را اجرا می‌کند؛ API ربات را اجرا نمی‌کند. برای توسعه Worker، ابتدا خروجی را بسازید و سپس `npx wrangler dev` را اجرا کنید. رازهای محیط محلی را در `.dev.vars` قرار دهید؛ این فایل در Git نادیده گرفته می‌شود. از ربات آزمایشی استفاده کنید.
+
+برای اجرای بررسی‌های پروژه:
+
+```sh
 npx playwright install chromium
-npm run test:browser
+npm run check
 npm run check:secrets
-npm audit --audit-level=low
+git diff --exit-code -- public/index.js
 npx wrangler deploy --dry-run
 ```
 
-برای ربات شخصی، `ADMINS_ID` را با شناسه‌های خودتان در Secrets تنظیم کنید. کد این پروژه به طور خودکار توکن یا حساب Cloudflare ایجاد نمی‌کند. داده‌های قدیمی بدون شناسه کاربر خودکار منتقل نمی‌شوند؛ قبل از ارتقا از پیش‌نویس‌های مهم خروجی بگیرید.
+`npm run check` شامل TypeScript/build، آزمون‌های کد و Runtime، آزمون‌های مرورگر و npm audit است. اگر کد را تغییر داده‌اید، خروجی تولیدشده را هم در commit قرار دهید؛ دستور `git diff` در بالا، بازسازی بدون تغییر را بررسی می‌کند.
 
-The official Telegram SDK is fetched from `telegram.org`. Preview maps use OpenStreetMap, and user-selected media hosts receive requests only after preview opt-in. Worker state does not store message bodies. See SECURITY.md for the timeout ambiguity of delivery and the history policy.
+| بررسی | پوشش |
+| --- | --- |
+| Worker/API | احراز هویت، مجوزها، ورودی نامعتبر، محدودیت نرخ، تحویل تکراری و بازیابی بعد از خطا |
+| Runtime | اجرای واقعی در workerd با SQLite Durable Objects |
+| مرورگر | جداسازی حساب‌ها، پاسخ دیررس، خطای ذخیره‌سازی، XSS، مدیا، پیش‌نویس و نمایش موبایل فارسی |
+| Build و CI | همخوانی خروجی تولیدشده، CSP، اسکن الگوهای راز، audit وابستگی‌ها و dry-run استقرار |
+
+تست‌ها از اعتبارنامه مصنوعی استفاده می‌کنند و درخواست‌های Telegram در آن‌ها شبیه‌سازی می‌شوند. Dependabot برای بررسی هفتگی به‌روزرسانی npm و GitHub Actions تنظیم شده است.
+
+## ساختار سورس
+
+```text
+TeleRich-Standalone/
+├── public/
+│   ├── worker.js             # Worker، API، وب‌هوک و BotState
+│   └── index.js              # خروجی تولیدشده؛ دستی ویرایش نشود
+├── src/
+│   ├── App.tsx               # استودیو، اتصال و فضای حساب
+│   ├── Renderer.tsx          # پیش‌نمایش محدودشده HTML و Markdown
+│   ├── markdown.ts          # تبدیل مشترک Markdown
+│   ├── storage.ts           # دسترسی به ذخیره‌سازی محلی
+│   └── content.ts           # راهنماها، نمونه‌ها و مراحل نصب
+├── scripts/
+│   ├── build-worker.mjs      # تولید ماژول وب و CSP
+│   └── check-secrets.mjs     # اسکن محدود الگوهای راز
+├── tests/                    # آزمون‌های Worker، Runtime، Build و مرورگر
+├── .github/                  # CI و Dependabot
+├── wrangler.jsonc            # Worker، binding و migration
+└── SECURITY.md               # سیاست‌ها و محدودیت‌های امنیتی
+```
+
+## گزارش مشکل و مشارکت
+
+برای باگ‌های عادی، در [Issues همین مخزن](https://github.com/xSOH3ILx/TeleRich-Standalone/issues) مراحل بازتولید، رفتار مورد انتظار و نسخه یا commit را بنویسید. توکن، کلید اپراتور و داده واقعی کاربران را منتشر نکنید. برای مورد امنیتی، پیش از انتشار جزئیات حساس با نگهدارنده هماهنگ کنید؛ راهنما در [SECURITY.md](SECURITY.md) است.
+
+تغییرات پیشنهادی را با Pull Request ارسال کنید و بررسی‌های مرتبط را اجرا کنید. تغییر سورس استودیو، Worker یا راهنماها باید با خروجی تازه `public/index.js` همراه باشد.
+
+## مجوز و اعتبارات
+
+نسخه مستقل این مخزن توسط [xSOH3ILx](https://github.com/xSOH3ILx) نگهداری می‌شود و بر پایه [DarknessShade/TeleRich](https://github.com/DarknessShade/TeleRich) ساخته شده است. اعتبار نویسنده اصلی **ÐΛɌ₭ᑎΞ𐒡𐒡** و مجوز [MIT](LICENSE) حفظ شده‌اند.
+
+تاریخچه Git پروژه اصلی وارد این مخزن نشده است. ایجاد تاریخچه مستقل، توکن افشاشده در نسخه‌های قدیمی بیرونی را باطل نمی‌کند؛ ابطال آن بر عهده صاحب توکن است.
+
+## English overview
+
+TeleRich Studio is an independently maintained Telegram message editor and bot by [xSOH3ILx](https://github.com/xSOH3ILx). It provides Markdown/HTML composition, a live preview, inline keyboards, account-scoped local drafts, and permission-checked publishing. The UI and bot guides support Persian and English.
+
+Deploy the checked-in `wrangler.jsonc` to Cloudflare Workers with its `BOT_STATE` SQLite Durable Object binding and migration. Configure your own `BOT_TOKEN`, `WEBHOOK_SECRET`, and `ADMIN_KEY`; set `ADMINS_ID` for a private bot. Register the webhook from Setup, then set the Worker URL as your bot's Mini App menu button.
+
+Use Node.js 22, install with `npm ci --ignore-scripts`, and build with `npm run build`. Read [SECURITY.md](SECURITY.md) before deployment. This edition preserves the original [DarknessShade/TeleRich](https://github.com/DarknessShade/TeleRich) attribution and MIT license while starting with fresh Git history.
